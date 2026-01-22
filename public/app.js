@@ -277,7 +277,7 @@ async function loadData(useDB = false) {
             }
         }
 
-        // 2. KABUPATEN (Length 5) -> Show Kab + Kec. Hide Prov.
+        // 2. KABUPATEN (Length 5) -> Show Kab + Kec + Kel. Hide Prov.
         else if (code.length === 5) {
             if (data.kabupaten && data.kabupaten.data) {
                 addDataToLayer(data.kabupaten.data, layers.kabupaten, {
@@ -290,6 +290,12 @@ async function loadData(useDB = false) {
                     color: '#0000ff', weight: 1, opacity: 1, fillOpacity: 0.1
                 });
                 newOverlayLayers[`Kecamatan${data.kecamatan.size ? ', ' + formatSize(data.kecamatan.size) : ''}`] = layers.kecamatan;
+            }
+            if (data.kelurahan && data.kelurahan.data) {
+                addDataToLayer(data.kelurahan.data, layers.kelurahan, {
+                    color: '#388e3c', weight: 1, opacity: 1, fillColor: '#388e3c', fillOpacity: 0.2
+                });
+                newOverlayLayers[`Kelurahan${data.kelurahan.size ? ', ' + formatSize(data.kelurahan.size) : ''}`] = layers.kelurahan;
             }
         }
 
