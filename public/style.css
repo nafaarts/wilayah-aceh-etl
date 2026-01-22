@@ -1,0 +1,371 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-color: #16a34a;
+    --success-hover: #15803d;
+    --info-color: #0891b2;
+    --info-hover: #0e7490;
+    --text-main: #1f2937;
+    --text-secondary: #4b5563;
+    --bg-white: #ffffff;
+    --bg-gray: #f3f4f6;
+    --border-color: #e5e7eb;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: var(--bg-gray);
+}
+
+/* Map Container */
+#map {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Sidebar / Floating Panel */
+.sidebar {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    width: 380px;
+    max-width: 90vw;
+    background-color: var(--bg-white);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 40px);
+    overflow: hidden;
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.sidebar.hidden {
+    transform: translateX(-420px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    width: 40px;
+    height: 40px;
+    background-color: var(--bg-white);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    cursor: pointer;
+    display: none;
+    /* Hidden by default (sidebar is open) */
+    align-items: center;
+    justify-content: center;
+    color: var(--text-main);
+    transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+    background-color: var(--bg-gray);
+}
+
+/* Hide toggle when sidebar is visible (it overlaps) */
+/* Actually, let's keep it visible but maybe move it or change icon */
+/* Better approach: Toggle button is always visible, but changes position/icon */
+
+/* New approach: Toggle button stays at top-left. Sidebar pushes it or covers it? 
+   Let's make the sidebar have a close button, and a separate open button when hidden.
+   OR: Toggle button moves with sidebar.
+*/
+
+.sidebar-toggle {
+    /* Initially hidden because sidebar is open */
+    display: none;
+}
+
+.sidebar.hidden+.sidebar-toggle,
+/* If we use JS to toggle class on body or button, we can control visibility */
+body.sidebar-closed .sidebar-toggle {
+    display: flex;
+}
+
+/* Let's refine:
+   We will put the toggle button OUTSIDE sidebar.
+   When Sidebar is OPEN: Toggle button is hidden (or we add a close btn inside sidebar).
+   When Sidebar is CLOSED: Toggle button is visible at top-left.
+*/
+
+.sidebar-toggle {
+    display: none;
+    /* Default hidden if sidebar is open */
+}
+
+.sidebar.hidden~.sidebar-toggle {
+    /* This selector depends on DOM order */
+    /* Wait, in HTML I put button BEFORE sidebar, so ~ won't work if button is first.
+       Let's use a class on the button itself or rely on JS.
+    */
+    display: flex;
+}
+
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: #fff;
+}
+
+.sidebar-header h1 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.sidebar-header p {
+    margin: 4px 0 0 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.sidebar-content {
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Form Groups */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.input-wrapper {
+    display: flex;
+    gap: 10px;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 16px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: var(--success-hover);
+}
+
+.btn-info {
+    background-color: var(--info-color);
+    color: white;
+}
+
+.btn-info:hover {
+    background-color: var(--info-hover);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Suggestions Dropdown */
+#suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 0 0 8px 8px;
+    box-shadow: var(--shadow-md);
+    z-index: 1001;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-top: 4px;
+}
+
+#suggestions div {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.9rem;
+}
+
+#suggestions div:last-child {
+    border-bottom: none;
+}
+
+#suggestions div:hover {
+    background-color: var(--bg-gray);
+}
+
+#suggestions strong {
+    color: var(--text-main);
+}
+
+#suggestions small {
+    color: var(--text-secondary);
+}
+
+/* Status Cards */
+.status-card {
+    background-color: var(--bg-gray);
+    border-radius: 8px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+}
+
+.status-card h3 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.db-info-content {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Progress Bar */
+.progress-container {
+    width: 100%;
+    height: 6px;
+    background-color: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress-bar {
+    height: 100%;
+    background-color: var(--success-color);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+/* Message Box */
+#status-message {
+    font-size: 0.9rem;
+    padding: 10px;
+    border-radius: 6px;
+    background-color: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #dbeafe;
+    display: none;
+    margin-top: 10px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .sidebar {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 12px 12px 0 0;
+        max-height: 60vh;
+    }
+
+    .sidebar.hidden {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+}
