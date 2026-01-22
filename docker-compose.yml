@@ -8,8 +8,8 @@ services:
       - /app/node_modules
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/wilayah_aceh
-    depends_on:
-      - db
+    # depends_on:
+    #   - db
     restart: always
 
 #   db:
