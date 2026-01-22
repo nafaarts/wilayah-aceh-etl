@@ -69,7 +69,92 @@ const initDB = async () => {
 };
 
 // Try to initialize DB on startup, but don't crash if it fails (allows local dev without DB)
-initDB();
+initDB().then(() => seedInitialData());
+
+// Helper to upsert feature (abstracting provider)
+async function upsertFeature(kode, nama, level, geometryObject) {
+    if (process.env.DB_PROVIDER === 'SUPABASE') {
+        if (!supabaseAdmin) throw new Error("Supabase Admin client is not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_KEY in .env");
+
+        const { error } = await supabaseAdmin.rpc('upsert_wilayah', {
+            p_kode: kode,
+            p_nama: nama,
+            p_level: level,
+            p_geojson: geometryObject // Pass object, Supabase handles serialization
+        });
+
+        if (error) throw new Error(`Supabase RPC Error: ${error.message}`);
+    } else {
+        // Default: POSTGRES (Direct Connection)
+        const geometryStr = JSON.stringify(geometryObject);
+        await pool.query(`
+            INSERT INTO m_wilayah_poligon (kode_wilayah_kemendagri, nama_wilayah_kemendagri, level, geometry, updated_at)
+            VALUES ($1, $2, $3, ST_Multi(ST_SimplifyPreserveTopology(ST_Force2D(ST_GeomFromGeoJSON($4)), 0.0001)), NOW())
+            ON CONFLICT (kode_wilayah_kemendagri) 
+            DO UPDATE SET 
+                nama_wilayah_kemendagri = EXCLUDED.nama_wilayah_kemendagri,
+                geometry = EXCLUDED.geometry,
+                updated_at = NOW();
+        `, [kode, nama, level, geometryStr]);
+    }
+}
+
+// Seed Initial Data
+const seedInitialData = async () => {
+    console.log("Checking for initial data...");
+    let exists = false;
+    try {
+        if (process.env.DB_PROVIDER === 'SUPABASE') {
+            if (!supabaseAdmin) {
+                console.warn("Supabase Admin not ready, skipping seed check.");
+                return;
+            }
+            // Check if any Provinsi (level 1) exists
+            const { count, error } = await supabaseAdmin
+                .from('m_wilayah_poligon')
+                .select('*', { count: 'exact', head: true })
+                .eq('level', 1);
+
+            if (error) {
+                // Ignore error if table doesn't exist yet (init_db.sql not run)
+                // console.error("Error checking seed status:", error.message);
+                return;
+            }
+            exists = count > 0;
+        } else {
+            const res = await pool.query('SELECT 1 FROM m_wilayah_poligon WHERE level = 1 LIMIT 1');
+            exists = res.rows.length > 0;
+        }
+    } catch (e) {
+        console.error("Error checking initial data:", e.message);
+        return;
+    }
+
+    if (!exists) {
+        console.log("No initial data found. Seeding 11_Aceh.geojson...");
+        const filePath = path.join(GEOJSON_DIR, '11_Aceh.geojson');
+        if (fs.existsSync(filePath)) {
+            try {
+                const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                console.log(`Found ${data.features.length} features in 11_Aceh.geojson`);
+
+                let processed = 0;
+                for (const feature of data.features) {
+                    const { kode, nama } = transformProperties(feature, 1);
+                    await upsertFeature(kode, nama, 1, feature.geometry);
+                    processed++;
+                }
+                console.log(`Seeding complete. Inserted ${processed} features.`);
+            } catch (e) {
+                console.error("Seeding error:", e);
+            }
+        } else {
+            console.warn(`File not found for seeding: ${filePath}`);
+        }
+    } else {
+        console.log("Initial data already exists. Skipping seed.");
+    }
+};
 
 // Helper to transform properties
 function transformProperties(feature, level) {
@@ -282,36 +367,9 @@ app.post('/api/db/sync', async (req, res) => {
 
             for (const feature of data.features) {
                 const { kode, nama } = transformProperties(feature, level);
-                const geometry = JSON.stringify(feature.geometry);
 
-                // Check Provider
-                if (process.env.DB_PROVIDER === 'SUPABASE') {
-                    if (!supabaseAdmin) {
-                        throw new Error("Supabase Admin client is not initialized. Check SUPABASE_URL and SUPABASE_SERVICE_KEY in .env");
-                    }
-
-                    const { error } = await supabaseAdmin.rpc('upsert_wilayah', {
-                        p_kode: kode,
-                        p_nama: nama,
-                        p_level: level,
-                        p_geojson: feature.geometry // Pass object, Supabase handles serialization
-                    });
-
-                    if (error) throw new Error(`Supabase RPC Error: ${error.message}`);
-                } else {
-                    // Default: POSTGRES (Direct Connection)
-                    // Upsert Logic with Simplification
-                    // Note: ST_SimplifyPreserveTopology(ST_Force2D(ST_GeomFromGeoJSON($4)), 0.0001)
-                    await pool.query(`
-                        INSERT INTO m_wilayah_poligon (kode_wilayah_kemendagri, nama_wilayah_kemendagri, level, geometry, updated_at)
-                        VALUES ($1, $2, $3, ST_Multi(ST_SimplifyPreserveTopology(ST_Force2D(ST_GeomFromGeoJSON($4)), 0.0001)), NOW())
-                        ON CONFLICT (kode_wilayah_kemendagri) 
-                        DO UPDATE SET 
-                            nama_wilayah_kemendagri = EXCLUDED.nama_wilayah_kemendagri,
-                            geometry = EXCLUDED.geometry,
-                            updated_at = NOW();
-                    `, [kode, nama, level, geometry]);
-                }
+                // Use Helper Function
+                await upsertFeature(kode, nama, level, feature.geometry);
 
                 totalProcessed++;
             }
